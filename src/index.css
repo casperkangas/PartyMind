@@ -1,68 +1,63 @@
+/* --- Color Variables --- */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --bg-dark: hsl(223 88% 2%);
+  --bg: hsl(216 64% 5%);
+  --bg-light: hsl(214 40% 9%);
+  --text: hsl(214 100% 97%);
+  --text-muted: hsl(214 36% 72%);
+  --highlight: hsl(214 23% 41%);
+  --border: hsl(214 30% 30%);
+  --border-muted: hsl(214 43% 19%);
+  --primary: hsl(214 78% 73%);
+  --secondary: hsl(35 58% 62%);
+  --danger: hsl(9 26% 64%);
+  --btn-text: var(--bg-dark);
+  --nav-height: 60px;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+body.light {
+  --bg-dark: hsl(214 59% 91%);
+  --bg: hsl(214 100% 96%);
+  --bg-light: hsl(214 100% 100%);
+  --text: hsl(220 100% 6%);
+  --text-muted: hsl(214 30% 30%);
+  --highlight: hsl(214 20% 90%);
+  --border: hsl(214 20% 52%);
+  --border-muted: hsl(214 28% 64%);
+  --primary: hsl(213 62% 30%);
+  --secondary: hsl(40 100% 16%);
+  --danger: hsl(9 21% 41%);
+  --btn-text: var(--bg-light);
 }
-a:hover {
-  color: #535bf2;
+
+/* --- Global Resets & Mobile Layout --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center content on wide screens */
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root {
+  width: 100%;
+  max-width: 600px; /* Mobile app feel on desktop */
+  min-height: 100vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+  font-family: inherit;
+  border: none;
 }
