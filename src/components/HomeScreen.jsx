@@ -10,6 +10,7 @@ export default function HomeScreen() {
   const addPlayer = useGameStore((state) => state.addPlayer);
   const removePlayer = useGameStore((state) => state.removePlayer);
   const updateSettings = useGameStore((state) => state.updateSettings);
+  const startGame = useGameStore((state) => state.startGame);
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -207,6 +208,7 @@ export default function HomeScreen() {
       {/* Start Button */}
       <div style={{ marginTop: "auto", paddingTop: "20px" }}>
         <button
+          onClick={startGame}
           style={{
             width: "100%",
             padding: "15px",

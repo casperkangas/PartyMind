@@ -1,30 +1,48 @@
 import { create } from "zustand";
 
 export const useGameStore = create((set) => ({
-  players: [],
+  // --- Navigation State ---
+  screen: "home", // Options: 'home', 'game', 'results'
 
-  // Default Settings
+  // --- Game Loop State ---
+  currentCircle: 1, // Which loop are we on?
+  currentPlayerIndex: 0, // Who is playing right now? (Index in players array)
+
+  // --- Existing Data ---
+  players: [],
   settings: {
-    circles: 3, // How many times we go around the group
-    timeLimit: 0, // 0 means "No Timer", otherwise seconds
-    difficulty: "Fun", // 'Fun', 'Wild', 'Kid-Friendly'
+    circles: 3,
+    timeLimit: 0,
+    difficulty: "Fun",
   },
 
-  // Action to add a player
+  // --- Actions ---
   addPlayer: (name) =>
     set((state) => ({
       players: [...state.players, { id: Date.now(), name: name, score: 0 }],
     })),
 
-  // Action to remove a player
   removePlayer: (id) =>
     set((state) => ({
       players: state.players.filter((p) => p.id !== id),
     })),
 
-  // Action to update settings
   updateSettings: (newSettings) =>
     set((state) => ({
       settings: { ...state.settings, ...newSettings },
     })),
+
+  // --- NEW: Game Flow Actions ---
+  startGame: () =>
+    set({
+      screen: "game",
+      currentCircle: 1,
+      currentPlayerIndex: 0,
+    }),
+
+  endGame: () => set({ screen: "results" }),
+
+  resetGame: () => set({ screen: "home", players: [] }), // Option to clear everything
+
+  returnToHome: () => set({ screen: "home" }), // Keep players, just go back
 }));
