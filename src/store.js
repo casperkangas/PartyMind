@@ -2,13 +2,13 @@ import { create } from "zustand";
 
 export const useGameStore = create((set) => ({
   // --- Navigation State ---
-  screen: "home", // Options: 'home', 'game', 'results'
+  screen: "home", // 'home', 'game', 'results'
 
   // --- Game Loop State ---
-  currentCircle: 1, // Which loop are we on?
-  currentPlayerIndex: 0, // Who is playing right now? (Index in players array)
+  currentCircle: 1,
+  currentPlayerIndex: 0,
 
-  // --- Existing Data ---
+  // --- Data ---
   players: [],
   settings: {
     circles: 3,
@@ -32,7 +32,6 @@ export const useGameStore = create((set) => ({
       settings: { ...state.settings, ...newSettings },
     })),
 
-  // --- NEW: Game Flow Actions ---
   startGame: () =>
     set({
       screen: "game",
@@ -40,9 +39,36 @@ export const useGameStore = create((set) => ({
       currentPlayerIndex: 0,
     }),
 
-  endGame: () => set({ screen: "results" }),
+  // --- THE CRITICAL LOGIC FOR THE DONE BUTTON ---
+  nextTurn: () =>
+    set((state) => {
+      console.log("Next turn triggered!"); // Debug log
+      const totalPlayers = state.players.length;
+      const nextIndex = state.currentPlayerIndex + 1;
 
-  resetGame: () => set({ screen: "home", players: [] }), // Option to clear everything
+      // 1. Is there another player in this circle?
+      if (nextIndex < totalPlayers) {
+        console.log("Moving to next player:", nextIndex);
+        return { currentPlayerIndex: nextIndex };
+      }
 
-  returnToHome: () => set({ screen: "home" }), // Keep players, just go back
+      // 2. No players left? Move to next circle.
+      const nextCircle = state.currentCircle + 1;
+
+      // 3. Are all circles done?
+      if (nextCircle > state.settings.circles) {
+        console.log("Game Over!");
+        return { screen: "results" };
+      }
+
+      // 4. Start new circle
+      console.log("Starting Circle:", nextCircle);
+      return {
+        currentCircle: nextCircle,
+        currentPlayerIndex: 0,
+      };
+    }),
+
+  returnToHome: () => set({ screen: "home" }),
+  resetGame: () => set({ screen: "home", players: [] }),
 }));

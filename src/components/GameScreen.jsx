@@ -3,20 +3,28 @@ import { useGameStore } from "../store";
 import { generateChallenge } from "../services/ai";
 
 export default function GameScreen() {
-  const [challenge, setChallenge] = useState("Loading challenge...");
-  const [loading, setLoading] = useState(true);
-
-  const returnToHome = useGameStore((state) => state.returnToHome);
+  // Global State
   const players = useGameStore((state) => state.players);
   const currentPlayerIndex = useGameStore((state) => state.currentPlayerIndex);
+  const currentCircle = useGameStore((state) => state.currentCircle);
   const settings = useGameStore((state) => state.settings);
+  const returnToHome = useGameStore((state) => state.returnToHome);
+  const nextTurn = useGameStore((state) => state.nextTurn);
+
+  // Local Component State
+  const [challenge, setChallenge] = useState("Loading...");
+  const [loading, setLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(settings.timeLimit); // Initialize with setting
 
   const currentPlayer = players[currentPlayerIndex];
 
-  // Effect: Generate a challenge when the component mounts or player changes
+  // --- EFFECT 1: Fetch Challenge & Reset Timer on Turn Change ---
   useEffect(() => {
     async function fetchTask() {
       setLoading(true);
+      // Reset timer whenever player changes
+      setTimeLeft(settings.timeLimit);
+
       const text = await generateChallenge(
         settings.difficulty,
         players,
@@ -26,25 +34,68 @@ export default function GameScreen() {
       setLoading(false);
     }
 
-    fetchTask();
-  }, [currentPlayerIndex]); // Re-run when player changes
+    if (currentPlayer) {
+      fetchTask();
+    }
+  }, [currentPlayerIndex, settings.difficulty, players, settings.timeLimit]);
+
+  // --- EFFECT 2: The Countdown Timer ---
+  useEffect(() => {
+    // Only run if we have a time limit, time is left, and we aren't loading
+    if (settings.timeLimit > 0 && timeLeft > 0 && !loading) {
+      const timerId = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [timeLeft, settings.timeLimit, loading]);
+
+  // Helper to format time (e.g. 0:05)
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   return (
     <div
       style={{
         textAlign: "center",
-        paddingTop: "30px",
+        paddingTop: "20px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* Header Info */}
-      <div style={{ marginBottom: "20px" }}>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Circle {useGameStore((state) => state.currentCircle)} /{" "}
-          {settings.circles}
-        </p>
+      {/* Top Bar: Circle & Timer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "10px",
+        }}
+      >
+        <span style={{ color: "var(--text-muted)" }}>
+          Circle {currentCircle} / {settings.circles}
+        </span>
+
+        {settings.timeLimit > 0 && (
+          <span
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color: timeLeft <= 5 ? "var(--danger)" : "var(--text)",
+              fontVariantNumeric: "tabular-nums", // Keeps numbers from jumping width
+            }}
+          >
+            ⏱ {formatTime(timeLeft)}
+          </span>
+        )}
+      </div>
+
+      {/* Player Info */}
+      <div style={{ marginBottom: "10px" }}>
         <h2 style={{ color: "var(--primary)", fontSize: "2.5rem" }}>
           {currentPlayer?.name}
         </h2>
@@ -56,14 +107,19 @@ export default function GameScreen() {
         style={{
           flex: 1,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          margin: "20px 0",
+          margin: "10px 0 20px 0",
           padding: "20px",
           backgroundColor: "var(--bg-light)",
           borderRadius: "15px",
-          border: "2px solid var(--border)",
+          border:
+            timeLeft === 0 && settings.timeLimit > 0
+              ? "2px solid var(--danger)" // Red border when time is up
+              : "2px solid var(--border)",
           boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+          transition: "border-color 0.3s",
         }}
       >
         {loading ? (
@@ -71,41 +127,70 @@ export default function GameScreen() {
             Asking the AI...
           </p>
         ) : (
-          <p
-            style={{ fontSize: "1.5rem", lineHeight: "1.4", fontWeight: "500" }}
-          >
-            {challenge}
-          </p>
+          <>
+            <p
+              style={{
+                fontSize: "1.4rem",
+                lineHeight: "1.4",
+                fontWeight: "500",
+              }}
+            >
+              {challenge}
+            </p>
+            {/* Show TIME UP message if timer hits 0 */}
+            {settings.timeLimit > 0 && timeLeft === 0 && (
+              <p
+                style={{
+                  color: "var(--danger)",
+                  fontWeight: "bold",
+                  marginTop: "15px",
+                  fontSize: "1.2rem",
+                  textTransform: "uppercase",
+                }}
+              >
+                ⏰ Time's Up! Drink! ⏰
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {/* Controls */}
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 2fr",
+          gap: "15px",
+          marginBottom: "20px",
+        }}
+      >
         <button
           onClick={returnToHome}
           style={{
-            flex: 1,
             padding: "15px",
             backgroundColor: "transparent",
-            border: "1px solid var(--danger)",
+            border: "2px solid var(--danger)",
             color: "var(--danger)",
             borderRadius: "10px",
             fontWeight: "bold",
+            fontSize: "1.2rem", // <--- Added to match Done button
+            cursor: "pointer",
           }}
         >
           Quit
         </button>
 
-        {/* Placeholder for "Next" button - we will logic this next */}
         <button
+          onClick={nextTurn}
           style={{
-            flex: 2,
             padding: "15px",
             backgroundColor: "var(--primary)",
+            border: "2px solid var(--primary)",
             color: "var(--btn-text)",
             borderRadius: "10px",
             fontWeight: "bold",
             fontSize: "1.2rem",
+            cursor: "pointer",
           }}
         >
           Done!
