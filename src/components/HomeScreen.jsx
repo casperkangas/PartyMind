@@ -6,14 +6,16 @@ export default function HomeScreen() {
 
   // Get data and functions from our store
   const players = useGameStore((state) => state.players);
+  const settings = useGameStore((state) => state.settings);
   const addPlayer = useGameStore((state) => state.addPlayer);
   const removePlayer = useGameStore((state) => state.removePlayer);
+  const updateSettings = useGameStore((state) => state.updateSettings);
 
   const handleAdd = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     addPlayer(name);
-    setName(""); // Clear input
+    setName("");
   };
 
   return (
@@ -25,7 +27,7 @@ export default function HomeScreen() {
         height: "100%",
       }}
     >
-      <header style={{ textAlign: "center", marginBottom: "20px" }}>
+      <header style={{ textAlign: "center", marginBottom: "10px" }}>
         <h1 style={{ color: "var(--primary)", fontSize: "3rem" }}>PartyMind</h1>
         <p style={{ color: "var(--text-muted)" }}>
           The Ultimate Pass & Play Game
@@ -64,7 +66,7 @@ export default function HomeScreen() {
       </form>
 
       {/* Player List */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: "150px" }}>
         {players.length === 0 ? (
           <p
             style={{
@@ -92,7 +94,7 @@ export default function HomeScreen() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   backgroundColor: "var(--bg-light)",
-                  padding: "15px",
+                  padding: "12px",
                   borderRadius: "8px",
                   border: "1px solid var(--border-muted)",
                 }}
@@ -115,7 +117,94 @@ export default function HomeScreen() {
         )}
       </div>
 
-      {/* Start Button Area (Placeholder) */}
+      {/* --- Game Settings Section --- */}
+      <div
+        style={{
+          backgroundColor: "var(--bg-light)",
+          padding: "15px",
+          borderRadius: "10px",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <h3 style={{ marginBottom: "15px", color: "var(--primary)" }}>
+          Game Settings
+        </h3>
+
+        {/* Circles Slider */}
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "5px",
+            }}
+          >
+            <span>Circles (Loops)</span>
+            <span style={{ color: "var(--highlight)" }}>
+              {settings.circles}
+            </span>
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={settings.circles}
+            onChange={(e) =>
+              updateSettings({ circles: Number(e.target.value) })
+            }
+            style={{ width: "100%", accentColor: "var(--primary)" }}
+          />
+        </div>
+
+        {/* Difficulty Select */}
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>Mode</label>
+          <select
+            value={settings.difficulty}
+            onChange={(e) => updateSettings({ difficulty: e.target.value })}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg)",
+              color: "var(--text)",
+            }}
+          >
+            <option value="Fun">Fun (Standard)</option>
+            <option value="Wild">Wild (Adults)</option>
+            <option value="Kid-Friendly">Kid Friendly</option>
+          </select>
+        </div>
+
+        {/* Timer Input */}
+        <div>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Time Limit (Seconds)
+          </label>
+          <input
+            type="number"
+            placeholder="0 = No Limit"
+            value={settings.timeLimit}
+            onChange={(e) =>
+              updateSettings({ timeLimit: Number(e.target.value) })
+            }
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg)",
+              color: "var(--text)",
+            }}
+          />
+          <small style={{ color: "var(--text-muted)" }}>
+            Set to 0 for no timer
+          </small>
+        </div>
+      </div>
+
+      {/* Start Button */}
       <div style={{ marginTop: "auto", paddingTop: "20px" }}>
         <button
           style={{

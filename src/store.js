@@ -3,6 +3,13 @@ import { create } from "zustand";
 export const useGameStore = create((set) => ({
   players: [],
 
+  // Default Settings
+  settings: {
+    circles: 3, // How many times we go around the group
+    timeLimit: 0, // 0 means "No Timer", otherwise seconds
+    difficulty: "Fun", // 'Fun', 'Wild', 'Kid-Friendly'
+  },
+
   // Action to add a player
   addPlayer: (name) =>
     set((state) => ({
@@ -13,5 +20,11 @@ export const useGameStore = create((set) => ({
   removePlayer: (id) =>
     set((state) => ({
       players: state.players.filter((p) => p.id !== id),
+    })),
+
+  // Action to update settings
+  updateSettings: (newSettings) =>
+    set((state) => ({
+      settings: { ...state.settings, ...newSettings },
     })),
 }));
