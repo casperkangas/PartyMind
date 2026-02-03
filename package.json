@@ -1,6 +1,5 @@
 {
   "name": "partymind",
-  "homepage": "https://casperkangas.github.io/PartyMind",
   "private": true,
   "version": "0.0.0",
   "type": "module",
