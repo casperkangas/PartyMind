@@ -48,27 +48,44 @@ export const useGameStore = create((set) => ({
 
   nextTurn: () =>
     set((state) => {
+      // 1. ADD POINT TO CURRENT PLAYER
+      const updatedPlayers = state.players.map((p, index) => {
+        if (index === state.currentPlayerIndex) {
+          return { ...p, score: p.score + 1 };
+        }
+        return p;
+      });
+
       const totalPlayers = state.players.length;
       const nextIndex = state.currentPlayerIndex + 1;
 
-      // 1. Next player in same circle
+      // 2. Determine Next State
+
+      // Case A: Next player in circle
       if (nextIndex < totalPlayers) {
-        return { currentPlayerIndex: nextIndex };
+        return {
+          players: updatedPlayers, // Save score
+          currentPlayerIndex: nextIndex,
+        };
       }
 
-      // 2. New Circle
+      // Case B: New Circle
       const nextCircle = state.currentCircle + 1;
 
-      // 3. Game Over
+      // Case C: Game Over
       if (nextCircle > state.settings.circles) {
-        return { screen: "results" };
+        return {
+          players: updatedPlayers, // Save final score
+          screen: "results",
+        };
       }
 
-      // 4. Start New Circle (AND RESET SKIPS)
+      // Case D: Start New Circle
       return {
+        players: updatedPlayers, // Save score
         currentCircle: nextCircle,
         currentPlayerIndex: 0,
-        skippedInCircle: [], // <--- Clear the skip list for the new circle
+        skippedInCircle: [],
       };
     }),
 
