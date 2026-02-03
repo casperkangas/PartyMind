@@ -1,20 +1,25 @@
-import { useEffect } from "react"; // <--- Add useEffect
-import useSound from "use-sound"; // <--- Add hook
+import { useEffect } from "react";
+import useSound from "use-sound";
 import { useGameStore } from "../store";
 
 export default function ResultsScreen() {
   const players = useGameStore((state) => state.players);
   const resetGame = useGameStore((state) => state.resetGame);
-  const settings = useGameStore((state) => state.settings); // <--- Get settings
+  const settings = useGameStore((state) => state.settings);
 
+  // Setup the Win sound
   const [playWin] = useSound("/sounds/win.mp3", { volume: 0.6 });
 
-  // Play sound on mount
+  // Sort players: Highest score first
+  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  const winner = sortedPlayers[0];
+
+  // Play sound when the screen loads (if sound is enabled)
   useEffect(() => {
     if (settings.soundEnabled) {
       playWin();
     }
-  }, []);
+  }, [settings.soundEnabled, playWin]);
 
   return (
     <div
