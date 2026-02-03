@@ -1,8 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
-
-// --- BACKUP / DEV TASKS ---
+// --- BACKUP TASKS (Offline Mode) ---
 const BACKUP_TASKS = [
   "Do 10 pushups immediately.",
   "Let the group go through your photo gallery for 1 minute.",
@@ -16,9 +12,10 @@ const BACKUP_TASKS = [
   "Imitate a monkey until your next turn.",
 ];
 
-function getBackupTask(isDev = false) {
-  const task = BACKUP_TASKS[Math.floor(Math.random() * BACKUP_TASKS.length)];
-  return isDev ? `[DEV MODE] ${task}` : `${task} (Backup Task)`;
+function getBackupTask() {
+  return (
+    BACKUP_TASKS[Math.floor(Math.random() * BACKUP_TASKS.length)] + " (Backup)"
+  );
 }
 
 export async function generateChallenge(
@@ -26,41 +23,28 @@ export async function generateChallenge(
   players,
   currentPlayerName,
 ) {
-  // 1. DEV MODE CHECK: Save tokens when running locally
+  // 1. DEV MODE: Save tokens when running locally
   if (import.meta.env.DEV) {
-    console.log("Dev mode detected: Skipping API call.");
-    // Simulate a short delay so it feels real
+    console.log("Dev mode: Skipping API call.");
     await new Promise((resolve) => setTimeout(resolve, 500));
-    return getBackupTask(true);
+    return `[DEV] ${getBackupTask()}`;
   }
 
-  // 2. REAL API CALL
+  // 2. PROD MODE: Call our Vercel Serverless Function
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-flash-lite-latest",
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ difficulty, players, currentPlayerName }),
     });
 
-    const otherPlayers = players
-      .filter((p) => p.name !== currentPlayerName)
-      .map((p) => p.name)
-      .join(", ");
+    if (!response.ok) throw new Error("Network response was not ok");
 
-    const prompt = `
-      You are a party game host. Generate a single, short, fun party game task/dare.
-      - Context: A mobile pass-and-play game.
-      - Current Player: ${currentPlayerName}
-      - Other Players available: ${otherPlayers}
-      - Difficulty/Mode: ${difficulty}
-      Rules:
-      1. Under 30 seconds.
-      2. No intro text, just the task.
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const data = await response.json();
+    return data.challenge;
   } catch (error) {
-    console.error("AI Error:", error);
-    return getBackupTask(false);
+    console.error("AI Service Error:", error);
+    // Fallback to local task if server fails
+    return getBackupTask();
   }
 }
