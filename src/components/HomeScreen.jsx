@@ -178,6 +178,28 @@ export default function HomeScreen() {
           </select>
         </div>
 
+        {/* Sound Toggle */}
+        <div
+          style={{
+            marginBottom: "15px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <label>Sound Effects</label>
+          <input
+            type="checkbox"
+            checked={settings.soundEnabled}
+            onChange={(e) => updateSettings({ soundEnabled: e.target.checked })}
+            style={{
+              width: "20px",
+              height: "20px",
+              accentColor: "var(--primary)",
+            }}
+          />
+        </div>
+
         {/* Timer Input */}
         <div>
           <label style={{ display: "block", marginBottom: "5px" }}>

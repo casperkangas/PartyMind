@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import useSound from "use-sound"; // <--- Import the hook
 import { useGameStore } from "../store";
 import { generateChallenge } from "../services/ai";
 
@@ -7,24 +8,34 @@ export default function GameScreen() {
   const currentPlayerIndex = useGameStore((state) => state.currentPlayerIndex);
   const currentCircle = useGameStore((state) => state.currentCircle);
   const settings = useGameStore((state) => state.settings);
-  const skippedInCircle = useGameStore((state) => state.skippedInCircle); // <--- Get skip list
-  const markPlayerSkipped = useGameStore((state) => state.markPlayerSkipped); // <--- Action
+  const skippedInCircle = useGameStore((state) => state.skippedInCircle);
+  const markPlayerSkipped = useGameStore((state) => state.markPlayerSkipped);
   const returnToHome = useGameStore((state) => state.returnToHome);
   const nextTurn = useGameStore((state) => state.nextTurn);
 
   const [challenge, setChallenge] = useState("Loading...");
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
-  const [penaltyText, setPenaltyText] = useState(""); // Track if we added a penalty
+  const [penaltyText, setPenaltyText] = useState("");
+
+  // --- SOUND HOOKS ---
+  // The 'soundEnabled' check happens inside the play function later
+  const [playTick] = useSound("/sounds/tick.mp3", { volume: 0.5 });
+  const [playAlarm] = useSound("/sounds/alarm.mp3", { volume: 0.7 });
+  const [playPop] = useSound("/sounds/pop.mp3", { volume: 0.5 });
 
   const currentPlayer = players[currentPlayerIndex];
   const hasSkipped = skippedInCircle.includes(currentPlayer?.id);
 
-  // --- Fetch Challenge Logic (Reusable) ---
+  // Helper to play sound only if enabled
+  const play = (soundFn) => {
+    if (settings.soundEnabled) soundFn();
+  };
+
   const fetchTask = async (isSkip = false) => {
     setLoading(true);
-    setPenaltyText(""); // Clear old penalty
-    setTimeLeft(settings.timeLimit); // Reset timer
+    setPenaltyText("");
+    setTimeLeft(settings.timeLimit);
 
     let text = await generateChallenge(
       settings.difficulty,
@@ -32,7 +43,6 @@ export default function GameScreen() {
       currentPlayer.name,
     );
 
-    // If this was triggered by a Skip, append the penalty
     if (isSkip) {
       setPenaltyText("⚠️ PENALTY: Drink 2 sips! ⚠️");
     }
@@ -41,30 +51,46 @@ export default function GameScreen() {
     setLoading(false);
   };
 
-  // Effect: Fetch on new turn
   useEffect(() => {
     if (currentPlayer) fetchTask();
-  }, [currentPlayerIndex, currentCircle]); // Re-run when player or circle changes
+  }, [currentPlayerIndex, currentCircle]);
 
-  // Timer Effect
+  // --- TIMER & SOUND EFFECT ---
   useEffect(() => {
     if (settings.timeLimit > 0 && timeLeft > 0 && !loading) {
-      const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      const timerId = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+
+        // Play tick sound (only if time is running low, e.g., last 10 seconds)
+        // OR remove the 'if' to play it every second
+        if (timeLeft <= 10) play(playTick);
+      }, 1000);
       return () => clearTimeout(timerId);
     }
+    // Time is up!
+    else if (settings.timeLimit > 0 && timeLeft === 0 && !loading) {
+      // We use a flag or check to ensure it doesn't loop infinitely
+      // But since this effect runs on timeLeft change, it runs once when hitting 0
+      play(playAlarm);
+    }
   }, [timeLeft, settings.timeLimit, loading]);
+
+  const handleSkip = () => {
+    if (hasSkipped) return;
+    play(playPop); // <--- Sound
+    markPlayerSkipped(currentPlayer.id);
+    fetchTask(true);
+  };
+
+  const handleNext = () => {
+    play(playPop); // <--- Sound
+    nextTurn();
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
-  // --- NEW: Handle Skip ---
-  const handleSkip = () => {
-    if (hasSkipped) return;
-    markPlayerSkipped(currentPlayer.id); // Mark used in store
-    fetchTask(true); // Fetch new task with penalty flag
   };
 
   return (
@@ -132,7 +158,7 @@ export default function GameScreen() {
       >
         {loading ? (
           <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>
-            {import.meta.env.DEV ? "Fetching Dev Task..." : "Asking the AI..."}
+            Asking AI...
           </p>
         ) : (
           <>
@@ -173,11 +199,11 @@ export default function GameScreen() {
         )}
       </div>
 
-      {/* Controls Grid */}
+      {/* Controls */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 2fr", // Quit | Skip | Done
+          gridTemplateColumns: "1fr 1fr 2fr",
           gap: "10px",
           marginBottom: "20px",
         }}
@@ -200,7 +226,7 @@ export default function GameScreen() {
 
         <button
           onClick={handleSkip}
-          disabled={hasSkipped || loading} // Disable if used or loading
+          disabled={hasSkipped || loading}
           style={{
             padding: "15px",
             backgroundColor: hasSkipped ? "var(--bg)" : "var(--highlight)",
@@ -217,7 +243,7 @@ export default function GameScreen() {
         </button>
 
         <button
-          onClick={nextTurn}
+          onClick={handleNext} // <--- Updated to use our wrapper
           disabled={loading}
           style={{
             padding: "15px",

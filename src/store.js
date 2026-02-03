@@ -14,6 +14,7 @@ export const useGameStore = create((set) => ({
     circles: 3,
     timeLimit: 0,
     difficulty: "Fun",
+    soundEnabled: true,
   },
 
   // --- Actions ---
