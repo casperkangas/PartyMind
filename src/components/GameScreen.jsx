@@ -3,58 +3,68 @@ import { useGameStore } from "../store";
 import { generateChallenge } from "../services/ai";
 
 export default function GameScreen() {
-  // Global State
   const players = useGameStore((state) => state.players);
   const currentPlayerIndex = useGameStore((state) => state.currentPlayerIndex);
   const currentCircle = useGameStore((state) => state.currentCircle);
   const settings = useGameStore((state) => state.settings);
+  const skippedInCircle = useGameStore((state) => state.skippedInCircle); // <--- Get skip list
+  const markPlayerSkipped = useGameStore((state) => state.markPlayerSkipped); // <--- Action
   const returnToHome = useGameStore((state) => state.returnToHome);
   const nextTurn = useGameStore((state) => state.nextTurn);
 
-  // Local Component State
   const [challenge, setChallenge] = useState("Loading...");
   const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(settings.timeLimit); // Initialize with setting
+  const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
+  const [penaltyText, setPenaltyText] = useState(""); // Track if we added a penalty
 
   const currentPlayer = players[currentPlayerIndex];
+  const hasSkipped = skippedInCircle.includes(currentPlayer?.id);
 
-  // --- EFFECT 1: Fetch Challenge & Reset Timer on Turn Change ---
-  useEffect(() => {
-    async function fetchTask() {
-      setLoading(true);
-      // Reset timer whenever player changes
-      setTimeLeft(settings.timeLimit);
+  // --- Fetch Challenge Logic (Reusable) ---
+  const fetchTask = async (isSkip = false) => {
+    setLoading(true);
+    setPenaltyText(""); // Clear old penalty
+    setTimeLeft(settings.timeLimit); // Reset timer
 
-      const text = await generateChallenge(
-        settings.difficulty,
-        players,
-        currentPlayer.name,
-      );
-      setChallenge(text);
-      setLoading(false);
+    let text = await generateChallenge(
+      settings.difficulty,
+      players,
+      currentPlayer.name,
+    );
+
+    // If this was triggered by a Skip, append the penalty
+    if (isSkip) {
+      setPenaltyText("⚠️ PENALTY: Drink 2 sips! ⚠️");
     }
 
-    if (currentPlayer) {
-      fetchTask();
-    }
-  }, [currentPlayerIndex, settings.difficulty, players, settings.timeLimit]);
+    setChallenge(text);
+    setLoading(false);
+  };
 
-  // --- EFFECT 2: The Countdown Timer ---
+  // Effect: Fetch on new turn
   useEffect(() => {
-    // Only run if we have a time limit, time is left, and we aren't loading
+    if (currentPlayer) fetchTask();
+  }, [currentPlayerIndex, currentCircle]); // Re-run when player or circle changes
+
+  // Timer Effect
+  useEffect(() => {
     if (settings.timeLimit > 0 && timeLeft > 0 && !loading) {
-      const timerId = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
+      const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timerId);
     }
   }, [timeLeft, settings.timeLimit, loading]);
 
-  // Helper to format time (e.g. 0:05)
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  // --- NEW: Handle Skip ---
+  const handleSkip = () => {
+    if (hasSkipped) return;
+    markPlayerSkipped(currentPlayer.id); // Mark used in store
+    fetchTask(true); // Fetch new task with penalty flag
   };
 
   return (
@@ -67,7 +77,7 @@ export default function GameScreen() {
         flexDirection: "column",
       }}
     >
-      {/* Top Bar: Circle & Timer */}
+      {/* Top Bar */}
       <div
         style={{
           display: "flex",
@@ -79,14 +89,13 @@ export default function GameScreen() {
         <span style={{ color: "var(--text-muted)" }}>
           Circle {currentCircle} / {settings.circles}
         </span>
-
         {settings.timeLimit > 0 && (
           <span
             style={{
               fontSize: "1.2rem",
               fontWeight: "bold",
               color: timeLeft <= 5 ? "var(--danger)" : "var(--text)",
-              fontVariantNumeric: "tabular-nums", // Keeps numbers from jumping width
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             ⏱ {formatTime(timeLeft)}
@@ -102,7 +111,7 @@ export default function GameScreen() {
         <p style={{ color: "var(--highlight)" }}>It's your turn!</p>
       </div>
 
-      {/* The Challenge Card */}
+      {/* Challenge Card */}
       <div
         style={{
           flex: 1,
@@ -116,18 +125,29 @@ export default function GameScreen() {
           borderRadius: "15px",
           border:
             timeLeft === 0 && settings.timeLimit > 0
-              ? "2px solid var(--danger)" // Red border when time is up
+              ? "2px solid var(--danger)"
               : "2px solid var(--border)",
           boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-          transition: "border-color 0.3s",
         }}
       >
         {loading ? (
           <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>
-            Asking the AI...
+            {import.meta.env.DEV ? "Fetching Dev Task..." : "Asking the AI..."}
           </p>
         ) : (
           <>
+            {penaltyText && (
+              <p
+                style={{
+                  color: "var(--secondary)",
+                  fontWeight: "bold",
+                  marginBottom: "10px",
+                  fontSize: "1.2rem",
+                }}
+              >
+                {penaltyText}
+              </p>
+            )}
             <p
               style={{
                 fontSize: "1.4rem",
@@ -137,30 +157,28 @@ export default function GameScreen() {
             >
               {challenge}
             </p>
-            {/* Show TIME UP message if timer hits 0 */}
             {settings.timeLimit > 0 && timeLeft === 0 && (
               <p
                 style={{
                   color: "var(--danger)",
                   fontWeight: "bold",
                   marginTop: "15px",
-                  fontSize: "1.2rem",
                   textTransform: "uppercase",
                 }}
               >
-                ⏰ Time's Up! Drink! ⏰
+                ⏰ Time's Up! ⏰
               </p>
             )}
           </>
         )}
       </div>
 
-      {/* Controls */}
+      {/* Controls Grid */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 2fr",
-          gap: "15px",
+          gridTemplateColumns: "1fr 1fr 2fr", // Quit | Skip | Done
+          gap: "10px",
           marginBottom: "20px",
         }}
       >
@@ -173,7 +191,7 @@ export default function GameScreen() {
             color: "var(--danger)",
             borderRadius: "10px",
             fontWeight: "bold",
-            fontSize: "1.2rem", // <--- Added to match Done button
+            fontSize: "1rem",
             cursor: "pointer",
           }}
         >
@@ -181,7 +199,26 @@ export default function GameScreen() {
         </button>
 
         <button
+          onClick={handleSkip}
+          disabled={hasSkipped || loading} // Disable if used or loading
+          style={{
+            padding: "15px",
+            backgroundColor: hasSkipped ? "var(--bg)" : "var(--highlight)",
+            border: "2px solid var(--highlight)",
+            color: hasSkipped ? "var(--text-muted)" : "var(--bg-dark)",
+            borderRadius: "10px",
+            fontWeight: "bold",
+            fontSize: "1rem",
+            cursor: hasSkipped ? "not-allowed" : "pointer",
+            opacity: hasSkipped ? 0.5 : 1,
+          }}
+        >
+          {hasSkipped ? "Skipped" : "Skip"}
+        </button>
+
+        <button
           onClick={nextTurn}
+          disabled={loading}
           style={{
             padding: "15px",
             backgroundColor: "var(--primary)",

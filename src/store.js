@@ -1,14 +1,14 @@
 import { create } from "zustand";
 
 export const useGameStore = create((set) => ({
-  // --- Navigation State ---
-  screen: "home", // 'home', 'game', 'results'
-
-  // --- Game Loop State ---
+  // --- Navigation & Game State ---
+  screen: "home",
   currentCircle: 1,
   currentPlayerIndex: 0,
 
-  // --- Data ---
+  // New: Track who skipped in the current circle (Array of player IDs)
+  skippedInCircle: [],
+
   players: [],
   settings: {
     circles: 3,
@@ -37,35 +37,38 @@ export const useGameStore = create((set) => ({
       screen: "game",
       currentCircle: 1,
       currentPlayerIndex: 0,
+      skippedInCircle: [], // Reset skips
     }),
 
-  // --- THE CRITICAL LOGIC FOR THE DONE BUTTON ---
+  // NEW: Mark the current player as having skipped
+  markPlayerSkipped: (playerId) =>
+    set((state) => ({
+      skippedInCircle: [...state.skippedInCircle, playerId],
+    })),
+
   nextTurn: () =>
     set((state) => {
-      console.log("Next turn triggered!"); // Debug log
       const totalPlayers = state.players.length;
       const nextIndex = state.currentPlayerIndex + 1;
 
-      // 1. Is there another player in this circle?
+      // 1. Next player in same circle
       if (nextIndex < totalPlayers) {
-        console.log("Moving to next player:", nextIndex);
         return { currentPlayerIndex: nextIndex };
       }
 
-      // 2. No players left? Move to next circle.
+      // 2. New Circle
       const nextCircle = state.currentCircle + 1;
 
-      // 3. Are all circles done?
+      // 3. Game Over
       if (nextCircle > state.settings.circles) {
-        console.log("Game Over!");
         return { screen: "results" };
       }
 
-      // 4. Start new circle
-      console.log("Starting Circle:", nextCircle);
+      // 4. Start New Circle (AND RESET SKIPS)
       return {
         currentCircle: nextCircle,
         currentPlayerIndex: 0,
+        skippedInCircle: [], // <--- Clear the skip list for the new circle
       };
     }),
 
